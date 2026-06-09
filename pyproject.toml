@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "image2mcq"
+version = "1.0.0"
+description = "Convert images (screenshots, scanned pages, diagrams) into MCQ questions using AI"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.9"
+keywords = ["mcq", "quiz", "ai", "education", "image", "ocr", "vision", "llm", "openrouter"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Education",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Education",
+    "Topic :: Scientific/Engineering :: Image Recognition",
+]
+
+dependencies = [
+    "anthropic>=0.25",
+    "openai>=1.30",
+    "Pillow>=10.0",
+    "pytesseract>=0.3",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7", "pytest-cov", "build", "twine"]
+
+[project.scripts]
+image2mcq = "image2mcq.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/manjur-ai/image2mcq"
+Issues   = "https://github.com/manjur-ai/image2mcq/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["image2mcq*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+norecursedirs = ["scripts"]
