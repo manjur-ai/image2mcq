@@ -139,29 +139,49 @@ def _make_backend(provider: str, api_key: str, mcq_model: str, **kwargs):
 
 
 class _OverrideContext:
-    def __init__(self, gen, api_key_override, prompt_log_path):
+    def __init__(self, gen, api_key_override, prompt_log_path,
+                 ocr_model=None, mcq_model=None):
         self.gen = gen
         self.api_key = api_key_override
         self.log_path = prompt_log_path
-        self._orig_backend = None
-        self._orig_log = None
+        self.ocr_model = ocr_model
+        self.mcq_model = mcq_model
+        self._saved = {}
 
     def __enter__(self):
         if self.api_key is not None:
-            self._orig_backend = self.gen.backend
+            self._saved['backend'] = self.gen.backend
             self.gen.backend = _make_backend(
                 self.gen.provider, self.api_key, self.gen.mcq_model,
             )
         if self.log_path is not None:
-            self._orig_log = getattr(self.gen, "prompt_log_path", None)
+            self._saved['prompt_log_path'] = getattr(self.gen, "prompt_log_path", None)
             self.gen.prompt_log_path = self.log_path
+        if self.ocr_model is not None:
+            ocr_val = self.ocr_model.lower()
+            if hasattr(self.gen, 'image_ocr_extractor'):
+                self._saved['image_ocr_extractor.backend'] = self.gen.image_ocr_extractor.backend
+                self.gen.image_ocr_extractor.backend = ocr_val
+        if self.mcq_model is not None:
+            _DEFAULT_VISION = "google/gemini-2.5-flash-lite"
+            _vis_model = self.mcq_model if self.mcq_model not in ("", "auto") else _DEFAULT_VISION
+            if hasattr(self.gen, 'image_ocr_extractor'):
+                self._saved['image_ocr_extractor.vision_model'] = self.gen.image_ocr_extractor.vision_model
+                self.gen.image_ocr_extractor.vision_model = _vis_model
+            _key = getattr(self.gen, '_resolved_api_key', None) or "ollama"
+            self._saved['backend'] = self.gen.backend
+            self.gen.backend = _make_backend(self.gen.provider, _key, self.mcq_model)
         return self
 
     def __exit__(self, *args):
-        if self._orig_backend is not None:
-            self.gen.backend = self._orig_backend
-        if self.log_path is not None:
-            self.gen.prompt_log_path = self._orig_log
+        if 'backend' in self._saved:
+            self.gen.backend = self._saved['backend']
+        if 'prompt_log_path' in self._saved:
+            self.gen.prompt_log_path = self._saved['prompt_log_path']
+        if 'image_ocr_extractor.backend' in self._saved:
+            self.gen.image_ocr_extractor.backend = self._saved['image_ocr_extractor.backend']
+        if 'image_ocr_extractor.vision_model' in self._saved:
+            self.gen.image_ocr_extractor.vision_model = self._saved['image_ocr_extractor.vision_model']
 
 
 class ImageMCQGenerator:
@@ -208,8 +228,10 @@ class ImageMCQGenerator:
                     f"No API key supplied. Pass api_key= or set "
                     f"{self.ENV_KEYS.get(self.provider, 'YOUR_API_KEY')} env var."
                 )
+        self._resolved_api_key = _key
         self.backend = _make_backend(self.provider, _key, self.mcq_model, **backend_kwargs)
         if api_key_override:
+            self._resolved_api_key = api_key_override
             self.backend = _make_backend(self.provider, api_key_override, self.mcq_model, **backend_kwargs)
         self.batch_size = max(1, batch_size)
         self.max_tokens = max_tokens
@@ -246,8 +268,11 @@ class ImageMCQGenerator:
                     f.write(f"\n===== {label} =====\n{text}\n")
 
     def _with_overrides(self, api_key_override: Optional[str] = None,
-                        prompt_log_path: Optional[str] = None):
-        return _OverrideContext(self, api_key_override, prompt_log_path)
+                        prompt_log_path: Optional[str] = None,
+                        ocr_model: Optional[str] = None,
+                        mcq_model: Optional[str] = None):
+        return _OverrideContext(self, api_key_override, prompt_log_path,
+                                ocr_model=ocr_model, mcq_model=mcq_model)
 
     def from_image_urls(
         self,
@@ -259,8 +284,11 @@ class ImageMCQGenerator:
         custom_instructions: Optional[str] = None,
         api_key_override: Optional[str] = None,
         prompt_log_path: Optional[str] = None,
+        ocr_model: Optional[str] = None,
+        mcq_model: Optional[str] = None,
     ) -> MCQSet:
-        with self._with_overrides(api_key_override, prompt_log_path):
+        with self._with_overrides(api_key_override, prompt_log_path,
+                                  ocr_model=ocr_model, mcq_model=mcq_model):
             if isinstance(urls, str):
                 urls = [urls]
             blocks = [ContentBlock(type="image", content=u) for u in urls]
@@ -290,8 +318,11 @@ class ImageMCQGenerator:
         custom_instructions: Optional[str] = None,
         api_key_override: Optional[str] = None,
         prompt_log_path: Optional[str] = None,
+        ocr_model: Optional[str] = None,
+        mcq_model: Optional[str] = None,
     ) -> MCQSet:
-        with self._with_overrides(api_key_override, prompt_log_path):
+        with self._with_overrides(api_key_override, prompt_log_path,
+                                  ocr_model=ocr_model, mcq_model=mcq_model):
             if isinstance(paths, str):
                 paths = [paths]
             blocks = []
