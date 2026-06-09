@@ -28,7 +28,7 @@ class TestModels:
             marks=1.0,
             negative_marks=0.25,
             difficulty="easy",
-            explaination="Basic addition.",
+            explanation="Basic addition.",
         )
         d = q.to_dict()
         assert d["question_html"] == "<b>What is 2+2?</b>"
@@ -40,7 +40,7 @@ class TestModels:
             question_html="Q", options=["A", "B", "C", "D"],
             answers=[0], multi=False,
             marks=1.0, negative_marks=0.25,
-            difficulty="easy", explaination="",
+            difficulty="easy", explanation="",
         )
         s = MCQSet(
             source_url="test", page_title="Test",
@@ -138,20 +138,20 @@ class TestImageMCQGenerator:
 
     def test_parse_response_handles_markdown_fences(self):
         from image2mcq.generator import ImageMCQGenerator
-        raw = '```json\n[{"question_html":"Q","options":["A","B","C","D"],"answers":[0],"difficulty":"easy","explaination":""}]\n```'
+        raw = '```json\n[{"question_html":"Q","options":["A","B","C","D"],"answers":[0],"difficulty":"easy","explanation":""}]\n```'
         qs = ImageMCQGenerator._parse_response(None, raw)
         assert len(qs) == 1
 
     def test_parse_response_handles_single_int_answer(self):
         from image2mcq.generator import ImageMCQGenerator
-        raw = '[{"question_html":"Q","options":["A","B","C","D"],"answers":2,"difficulty":"medium","explaination":""}]'
+        raw = '[{"question_html":"Q","options":["A","B","C","D"],"answers":2,"difficulty":"medium","explanation":""}]'
         qs = ImageMCQGenerator._parse_response(None, raw)
         assert len(qs) == 1
         assert qs[0].answers == [2]
 
     def test_parse_response_skips_malformed(self):
         from image2mcq.generator import ImageMCQGenerator
-        raw = '[null, {"question_html":"Q","options":["A","B","C","D"],"answers":[0],"difficulty":"easy","explaination":""}]'
+        raw = '[null, {"question_html":"Q","options":["A","B","C","D"],"answers":[0],"difficulty":"easy","explanation":""}]'
         qs = ImageMCQGenerator._parse_response(None, raw)
         assert len(qs) == 1
 

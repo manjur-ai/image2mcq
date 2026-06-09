@@ -166,7 +166,7 @@ print(mcq.to_json())
 #       "marks": 1.0,
 #       "negative_marks": 0.25,
 #       "difficulty": "easy",
-#       "explaination": "Binary search halves the search space each iteration."
+#       "explanation": "Binary search halves the search space each iteration."
 #     }
 #   ]
 # }
