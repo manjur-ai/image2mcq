@@ -170,10 +170,12 @@ def main():
             sys.exit(1)
         if args.image_url:
             mcq_set = gen.from_image_urls(args.image_url, n=n, difficulty_mix=difficulty,
-                                          focus_topics=topics, custom_instructions=instructions)
+                                          focus_topics=topics, custom_instructions=instructions,
+                                          ocr_model=args.ocr_model, mcq_model=args.mcq_model)
         if args.image_path:
             mcq_set = gen.from_image_paths(args.image_path, n=n, difficulty_mix=difficulty,
-                                           focus_topics=topics, custom_instructions=instructions)
+                                           focus_topics=topics, custom_instructions=instructions,
+                                           ocr_model=args.ocr_model, mcq_model=args.mcq_model)
     except Exception as e:
         print(f"Generation failed: {e}", file=sys.stderr)
         sys.exit(1)
