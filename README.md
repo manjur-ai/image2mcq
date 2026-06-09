@@ -37,6 +37,24 @@ image2mcq --image-path notes.png -o questions.json --format json
 
 # Use n=999 to generate as many as the content supports
 image2mcq --image-path textbook-page.png
+
+# Override OCR model per call
+image2mcq --image-folder ./slides/ --ocr-model "google/gemini-2.5-flash-lite"
+
+# Override MCQ model per call
+image2mcq --image-path diagram.png --mcq-model "openai/gpt-4o"
+
+# Save OCR text to file
+image2mcq --image-path scanned-page.png --method twostep --save-ocr-path ocr_output.txt
+
+# Custom instructions
+image2mcq --image-path graph.png -i "Make answers very close and confusing"
+
+# Show progress bar during MCQ generation
+image2mcq --image-folder ./slides/ --progress
+
+# Local Ollama
+image2mcq --image-path diagram.png --provider ollama --mcq-model qwen2.5:7b
 ```
 
 ### Python API
@@ -60,6 +78,9 @@ print(mcq.to_json())
 
 # From multiple images
 mcq = gen.from_image_paths(["page1.png", "page2.png", "page3.png"])
+
+# Show progress bar during generation
+mcq = gen.from_image_paths("lecture-slide.png", n=5, show_progress=True)
 ```
 
 ### Two-Step (OCR → MCQ)
@@ -68,6 +89,8 @@ mcq = gen.from_image_paths(["page1.png", "page2.png", "page3.png"])
 gen = ImageMCQGenerator(
     api_key="sk-or-v1-...",
     method="twostep",  # default
+    ocr_model="google/gemini-2.5-flash-lite",
+    save_ocr_path="ocr_output.txt",  # save OCR text to file
 )
 mcq = gen.from_image_paths("scanned-page.png", n=10)
 ```
@@ -83,7 +106,7 @@ gen = ImageMCQGenerator(
 mcq = gen.from_image_paths("architecture-diagram.png", n=5)
 ```
 
-### Custom Instructions
+### Custom Instructions & Overrides
 
 ```python
 mcq = gen.from_image_paths(
@@ -92,6 +115,10 @@ mcq = gen.from_image_paths(
     difficulty_mix="50% easy, 50% hard",
     focus_topics=["data structures", "time complexity"],
     custom_instructions="Make answers very close and confusing",
+    ocr_model="google/gemini-2.5-flash-lite",  # per-call override
+    mcq_model="openai/gpt-4o",                  # per-call override
+    api_key_override="sk-or-v1-...",            # different key for this call
+    prompt_log_path="stdout",                   # log prompts for this call
 )
 ```
 

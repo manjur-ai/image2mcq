@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import sys
 from pathlib import Path
 from typing import List, Optional, Tuple, Union
 
@@ -209,6 +210,10 @@ class ImageMCQGenerator:
         prompt_log_path: Optional[str] = None,
         save_ocr_path: Optional[str] = None,
         api_key_override: Optional[str] = None,
+        extractor_kwargs: Optional[dict] = None,
+        pdf_backend: str = "auto_detect",
+        pdf_scanned_max_pages: int = 50,
+        pdf_chunk_size: int = 1500,
         **backend_kwargs,
     ):
         self.provider = provider.lower()
@@ -286,6 +291,7 @@ class ImageMCQGenerator:
         prompt_log_path: Optional[str] = None,
         ocr_model: Optional[str] = None,
         mcq_model: Optional[str] = None,
+        show_progress: bool = False,
     ) -> MCQSet:
         with self._with_overrides(api_key_override, prompt_log_path,
                                   ocr_model=ocr_model, mcq_model=mcq_model):
@@ -299,6 +305,7 @@ class ImageMCQGenerator:
                     difficulty_mix=difficulty_mix,
                     focus_topics=focus_topics,
                     custom_instructions=custom_instructions,
+                    show_progress=show_progress,
                 )
             all_qs = self._vision_mcq(
                 blocks, n=n, page_title=title,
@@ -320,6 +327,7 @@ class ImageMCQGenerator:
         prompt_log_path: Optional[str] = None,
         ocr_model: Optional[str] = None,
         mcq_model: Optional[str] = None,
+        show_progress: bool = False,
     ) -> MCQSet:
         with self._with_overrides(api_key_override, prompt_log_path,
                                   ocr_model=ocr_model, mcq_model=mcq_model):
@@ -338,6 +346,7 @@ class ImageMCQGenerator:
                     difficulty_mix=difficulty_mix,
                     focus_topics=focus_topics,
                     custom_instructions=custom_instructions,
+                    show_progress=show_progress,
                 )
             all_qs = self._vision_mcq(
                 blocks, n=n, page_title=title,
@@ -446,6 +455,7 @@ class ImageMCQGenerator:
         difficulty_mix: Optional[str] = None,
         focus_topics: Optional[List[str]] = None,
         custom_instructions: Optional[str] = None,
+        show_progress: bool = False,
     ) -> MCQSet:
         image_bytes_list: List[bytes] = []
         for block in blocks:
@@ -474,6 +484,7 @@ class ImageMCQGenerator:
             difficulty_mix=difficulty_mix,
             focus_topics=focus_topics,
             custom_instructions=custom_instructions,
+            show_progress=show_progress,
         )
         return self._build_mcq_set(all_qs, n, title, source, blocks)
 
@@ -581,6 +592,7 @@ class ImageMCQGenerator:
         difficulty_mix: Optional[str],
         focus_topics: Optional[List[str]],
         custom_instructions: Optional[str] = None,
+        show_progress: bool = False,
     ) -> Tuple[List[MCQQuestion], str]:
         if not blocks:
             return [], ""
@@ -630,8 +642,22 @@ class ImageMCQGenerator:
             summary = self._build_summary(blocks)
             return all_questions, summary
 
+        batch_num = 0
+        total_batches = (remaining + self.batch_size - 1) // self.batch_size
+        if show_progress:
+            try:
+                from tqdm import tqdm
+                pbar = tqdm(total=remaining, desc="Generating MCQs", unit="q")
+            except ImportError:
+                pbar = None
+        else:
+            pbar = None
+
         while remaining > 0:
+            batch_num += 1
             batch_n = min(remaining, self.batch_size)
+            if show_progress and pbar is None:
+                print(f"  [image2mcq] Batch {batch_num}/{total_batches} ({batch_n} questions)...", file=sys.stderr)
             user_prompt = build_user_prompt(
                 blocks=blocks,
                 n=batch_n,
@@ -646,12 +672,16 @@ class ImageMCQGenerator:
             batch_questions = self._parse_response(raw)
             all_questions.extend(batch_questions)
             remaining -= len(batch_questions)
+            if pbar is not None:
+                pbar.update(len(batch_questions))
 
             if len(batch_questions) == 0:
                 break
             if remaining > 0 and len(batch_questions) < batch_n:
                 break
 
+        if pbar is not None:
+            pbar.close()
         all_questions = all_questions[:n]
         summary = self._build_summary(blocks)
         return all_questions, summary

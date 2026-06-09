@@ -1,3 +1,14 @@
+"""
+image2mcq CLI
+=============
+
+Usage examples
+--------------
+image2mcq --image-path screenshot.png -n 10
+image2mcq --image-url https://example.com/diagram.png -o questions.json --format json
+image2mcq --image-folder ./slides/ --method images2mcq
+image2mcq --version
+"""
 import argparse
 import json
 import os
@@ -66,6 +77,8 @@ def main():
     gen_group.add_argument("--topics", nargs="*", help="Focus topics")
     gen_group.add_argument("--instructions", "-i", default="",
                            help='Custom instructions e.g. "Make answers very close and confusing"')
+    gen_group.add_argument("--progress", action="store_true",
+                           help="Show progress bar during MCQ generation")
     gen_group.add_argument("--batch-size", type=int, default=10,
                            help="Questions per API call (default: 10)")
 
@@ -165,17 +178,16 @@ def main():
     mcq_set = None
 
     try:
-        if args.image_url and args.image_path:
-            print("Error: specify either --image-url or --image-path, not both.", file=sys.stderr)
-            sys.exit(1)
         if args.image_url:
             mcq_set = gen.from_image_urls(args.image_url, n=n, difficulty_mix=difficulty,
                                           focus_topics=topics, custom_instructions=instructions,
-                                          ocr_model=args.ocr_model, mcq_model=args.mcq_model)
+                                          ocr_model=args.ocr_model, mcq_model=args.mcq_model,
+                                          show_progress=args.progress)
         if args.image_path:
             mcq_set = gen.from_image_paths(args.image_path, n=n, difficulty_mix=difficulty,
                                            focus_topics=topics, custom_instructions=instructions,
-                                           ocr_model=args.ocr_model, mcq_model=args.mcq_model)
+                                           ocr_model=args.ocr_model, mcq_model=args.mcq_model,
+                                           show_progress=args.progress)
     except Exception as e:
         print(f"Generation failed: {e}", file=sys.stderr)
         sys.exit(1)
